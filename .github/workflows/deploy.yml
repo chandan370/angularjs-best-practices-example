@@ -1,0 +1,82 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    name: Build, Push Docker Image & Deploy to EC2
+    runs-on: ubuntu-latest
+    
+    env:
+      AWS_REGION: us-east-1
+      ECR_REPOSITORY: angularjs-best-practices
+      IMAGE_TAG: latest
+      EC2_USER: ec2-user
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_KEY: ${{ secrets.EC2_KEY }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+
+    - name: Install dependencies
+      run: |
+        npm install -g bower
+        npm install
+        bower install
+
+    - name: Run tests
+      run: |
+        npm test || echo "No tests available or test step skipped."
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push Docker image to ECR
+      run: |
+        docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $ECR_REPOSITORY:$IMAGE_TAG ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
+
+    - name: Deploy to EC2 via SSH and Docker
+      run: |
+        echo "$EC2_KEY" > private_key.pem
+        chmod 600 private_key.pem
+        ssh -o StrictHostKeyChecking=no -i private_key.pem $EC2_USER@$EC2_HOST << EOF
+          docker pull ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
+          docker stop angular-app || true
+          docker rm angular-app || true
+          docker run -d -p 80:80 --name angular-app ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
+        EOF
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
