@@ -1,6 +1,9 @@
+const puppeteer = require('puppeteer');
+
+process.env.CHROME_BIN = puppeteer.executablePath();
+
 module.exports = function (config) {
     config.set({
-
         basePath: './app',
 
         files: [
@@ -15,25 +18,21 @@ module.exports = function (config) {
         ],
 
         exclude: [
-            // 'main/*.spec.js',
-            // 'main/about/**/*.spec.js',
-            // 'main/home/**/*.spec.js',
-            // 'directives/**/*.spec.js'
+            // exclude test files if needed
         ],
 
         autoWatch: true,
 
         frameworks: ['jasmine'],
 
-        
-browsers: ['ChromeHeadless'],
-customLaunchers: {
-  ChromeHeadless: {
-    base: 'ChromeHeadless',
-    flags: ['--no-sandbox']
-  }
-},
-	
+        browsers: ['ChromeHeadlessNoSandbox'],
+
+        customLaunchers: {
+            ChromeHeadlessNoSandbox: {
+                base: 'ChromeHeadless',
+                flags: ['--no-sandbox', '--disable-setuid-sandbox']
+            }
+        },
 
         plugins: [
             'karma-chrome-launcher',
