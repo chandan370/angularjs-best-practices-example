@@ -3,7 +3,7 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - main
+      - master
 jobs:
   deploy:
     name: Build, Push Docker Image & Deploy to EC2
